@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "465675618168",
+    "project_id": "mind-mosaic-project",
+    "storage_bucket": "mind-mosaic-project.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:465675618168:android:689312749fd31e533d6a8d",
+        "android_client_info": {
+          "package_name": "com.example.mind_mosaic_proj"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNeoMQkf8S5ase37MJO4gd6_oCkuKui1U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
