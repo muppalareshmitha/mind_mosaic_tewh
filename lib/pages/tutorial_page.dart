@@ -25,23 +25,24 @@ class TutorialPage extends StatelessWidget {
 }
 
 class MyVideoPlayer extends StatefulWidget {
-  const MyVideoPlayer({super.key});
-
   @override
   _MyVideoPlayerState createState() => _MyVideoPlayerState();
 }
 
 class _MyVideoPlayerState extends State<MyVideoPlayer> {
   late VideoPlayerController _controller;
-  bool _isOverlayVisible = false;
+  late bool _isOverlayVisible;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset('assets/tutorial_video.mp4')
+    _controller = VideoPlayerController.asset(
+      'assets/videos/tutorial_video.mp4', 
+    )
       ..initialize().then((_) {
         setState(() {});
       });
+    _isOverlayVisible = false;
   }
 
   void _toggleOverlayVisibility() {
@@ -109,11 +110,13 @@ class __ControlsOverlayState extends State<_ControlsOverlay> {
                     children: [
                       IconButton(
                         onPressed: () {
-                          if (widget.controller.value.isPlaying) {
-                            widget.controller.pause();
-                          } else {
-                            widget.controller.play();
-                          }
+                          setState(() {
+                            if (widget.controller.value.isPlaying) {
+                              widget.controller.pause();
+                            } else {
+                              widget.controller.play();
+                            }
+                          });
                         },
                         icon: Icon(
                           widget.controller.value.isPlaying

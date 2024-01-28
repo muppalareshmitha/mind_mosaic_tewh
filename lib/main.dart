@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:mind_mosaic_proj/auth/main_page.dart';
 import 'package:mind_mosaic_proj/pages/game_history.dart';
 import 'package:mind_mosaic_proj/pages/game_pages/export_pages.dart';
