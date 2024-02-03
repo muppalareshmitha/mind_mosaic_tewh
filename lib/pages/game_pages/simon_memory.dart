@@ -1,68 +1,64 @@
-// ignore_for_file: prefer_const_literals_to_create_immutables, prefer_const_constructors, avoid_print
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 
 class SimonMemoryPage extends StatefulWidget {
-  const SimonMemoryPage({super.key});
-
   @override
-  State<SimonMemoryPage> createState() => SimonMemoryPageState();
+  _SimonMemoryPageState createState() => _SimonMemoryPageState();
 }
 
-class SimonMemoryPageState extends State<SimonMemoryPage> {
-  ServerSocket? serverSocket;
-  Socket? socket;
+class _SimonMemoryPageState extends State<SimonMemoryPage> {
+  late File serialPort;
+  late IOSink serialSink;
   String receivedData = 'No data received';
 
   @override
   void initState() {
     super.initState();
-    initServer();
+    initSerialCommunication();
   }
 
-  void initServer() async {
-    serverSocket = await ServerSocket.bind('192.168.1.100', 12345); // Need to replace with Pico's IP and Port
-    serverSocket?.listen((Socket client) {
-      socket = client;
-      socket?.listen(
-        (List<int> data) {
-          // Handle received data
-          String message = String.fromCharCodes(data);
-          setState(() {
-            receivedData = message;
-          });
-        },
-        onError: (error) {
-          print('Error: $error');
-        },
-        onDone: () {
-          print('Connection closed');
-        },
-      );
-    });
+  void initSerialCommunication() async {
+    serialPort = File('/dev/ttyUSB0'); // Replace with serial port of USB-to-Serial adapter
+    serialSink = serialPort.openWrite();
+    receivedData = 'No data received';
+
+    // Set up a listener for receiving data
+    serialPort.openRead().listen(
+      (List<int> data) {
+        String message = String.fromCharCodes(data);
+        setState(() {
+          receivedData = message;
+        });
+
+        // Echo the received data back to the Raspberry Pi Pico
+        sendData(message);
+      },
+      onDone: () {
+        print('Serial port closed');
+      },
+      onError: (error) {
+        print('Error: $error');
+      },
+      cancelOnError: true,
+    );
+  }
+
+  void sendData(String data) {
+    serialSink.write(data);
+    serialSink.flush();
   }
 
   @override
   void dispose() {
-    serverSocket?.close();
-    socket?.close();
+    serialSink.close();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Simon Memory Page"),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.home),
-            iconSize: 30,
-            onPressed: () {
-              Navigator.popUntil(context, ModalRoute.withName('/'));
-            },
-          ),
-        ],
+        title: Text('Pico Communication Test'),
       ),
       body: Center(
         child: Column(
@@ -74,6 +70,14 @@ class SimonMemoryPageState extends State<SimonMemoryPage> {
             Text(
               receivedData,
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                // Send a sample command to the Pico
+                sendData('Hello, Pico!');
+              },
+              child: Text('Send Data to Pico'),
             ),
           ],
         ),
