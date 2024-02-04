@@ -1,5 +1,9 @@
-import 'dart:io';
+// ignore_for_file: prefer_const_constructors, prefer_final_fields, library_private_types_in_public_api, use_key_in_widget_constructors, sort_child_properties_last, prefer_interpolation_to_compose_strings, prefer_is_empty, avoid_function_literals_in_foreach_calls, avoid_print
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:typed_data';
+import 'package:usb_serial/transaction.dart';
+import 'package:usb_serial/usb_serial.dart';
 
 class SimonMemoryPage extends StatefulWidget {
   @override
@@ -7,81 +11,173 @@ class SimonMemoryPage extends StatefulWidget {
 }
 
 class _SimonMemoryPageState extends State<SimonMemoryPage> {
-  late File serialPort;
-  late IOSink serialSink;
-  String receivedData = 'No data received';
+  UsbPort? _port;
+  String _status = "Idle";
+  List<Widget> _ports = [];
+  List<Widget> _serialData = [];
+
+  StreamSubscription<String>? _subscription;
+  Transaction<String>? _transaction;
+  UsbDevice? _device;
+
+  TextEditingController _textController = TextEditingController();
+
+  Future<bool> _connectTo(device) async {
+    _serialData.clear();
+
+    if (_subscription != null) {
+      _subscription!.cancel();
+      _subscription = null;
+    }
+
+    if (_transaction != null) {
+      _transaction!.dispose();
+      _transaction = null;
+    }
+
+    if (_port != null) {
+      _port!.close();
+      _port = null;
+    }
+
+    if (device == null) {
+      _device = null;
+      setState(() {
+        _status = "Disconnected";
+      });
+      return true;
+    }
+
+    _port = await device.create();
+    if (await (_port!.open()) != true) {
+      setState(() {
+        _status = "Failed to open port";
+      });
+      return false;
+    }
+    _device = device;
+
+    await _port!.setDTR(true);
+    await _port!.setRTS(true);
+    await _port!.setPortParameters(
+        115200, UsbPort.DATABITS_8, UsbPort.STOPBITS_1, UsbPort.PARITY_NONE);
+
+    _transaction = Transaction.stringTerminated(
+        _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+
+    _subscription = _transaction!.stream.listen((String line) {
+      setState(() {
+        _serialData.add(Text(line));
+        if (_serialData.length > 20) {
+          _serialData.removeAt(0);
+        }
+      });
+    });
+
+    setState(() {
+      _status = "Connected";
+    });
+    return true;
+  }
+
+  void _getPorts() async {
+    _ports = [];
+    List<UsbDevice> devices = await UsbSerial.listDevices();
+    if (!devices.contains(_device)) {
+      _connectTo(null);
+    }
+    print(devices);
+
+    devices.forEach((device) {
+      _ports.add(ListTile(
+          leading: Icon(Icons.usb),
+          title: Text(device.productName!),
+          subtitle: Text(device.manufacturerName!),
+          trailing: ElevatedButton(
+            child: Text(_device == device ? "Disconnect" : "Connect"),
+            onPressed: () {
+              _connectTo(_device == device ? null : device).then((res) {
+                _getPorts();
+              });
+            },
+          )));
+    });
+
+    setState(() {
+      print(_ports);
+    });
+  }
 
   @override
   void initState() {
     super.initState();
-    initSerialCommunication();
-  }
 
-  void initSerialCommunication() async {
-    serialPort = File('/dev/ttyUSB0'); // Replace with serial port of USB-to-Serial adapter
-    serialSink = serialPort.openWrite();
-    receivedData = 'No data received';
+    UsbSerial.usbEventStream!.listen((UsbEvent event) {
+      _getPorts();
+    });
 
-    // Set up a listener for receiving data
-    serialPort.openRead().listen(
-      (List<int> data) {
-        String message = String.fromCharCodes(data);
-        setState(() {
-          receivedData = message;
-        });
-
-        // Echo the received data back to the Raspberry Pi Pico
-        sendData(message);
-      },
-      onDone: () {
-        print('Serial port closed');
-      },
-      onError: (error) {
-        print('Error: $error');
-      },
-      cancelOnError: true,
-    );
-  }
-
-  void sendData(String data) {
-    serialSink.write(data);
-    serialSink.flush();
+    _getPorts();
   }
 
   @override
   void dispose() {
-    serialSink.close();
     super.dispose();
+    _connectTo(null);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Pico Communication Test'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
+    return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          appBar: AppBar(
+            title: const Text('USB Serial Plugin example app'),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.home),
+                iconSize: 30,
+                onPressed: () {
+                  Navigator.popUntil(context, ModalRoute.withName('/'));
+                },
+              ),
+            ],
+            backgroundColor: Colors.purple,
+          ),
+          body: Center(
+              child: Column(children: <Widget>[
             Text(
-              'Received Data:',
+                _ports.length > 0
+                    ? "Available Serial Ports"
+                    : "No serial devices available",
+                style: Theme.of(context).textTheme.titleLarge),
+            ..._ports,
+            Text('Status: $_status\n'),
+            Text('info: ${_port.toString()}\n'),
+            ListTile(
+              title: TextField(
+                controller: _textController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Text To Send',
+                ),
+              ),
+              trailing: ElevatedButton(
+                child: Text("Send"),
+                onPressed: _port == null
+                    ? null
+                    : () async {
+                        if (_port == null) {
+                          return;
+                        }
+                        String data = _textController.text + "\r\n";
+                        await _port!.write(Uint8List.fromList(data.codeUnits));
+                        _textController.text = "";
+                      },
+              ),
             ),
-            Text(
-              receivedData,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Send a sample command to the Pico
-                sendData('Hello, Pico!');
-              },
-              child: Text('Send Data to Pico'),
-            ),
-          ],
-        ),
-      ),
-    );
+            Text("Result Data", style: Theme.of(context).textTheme.titleLarge),
+            ..._serialData,
+          ])),
+        ));
   }
 }
