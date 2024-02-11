@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}): super(key: key);
@@ -50,8 +51,14 @@ class _HomePageState extends State<HomePage> {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamed(context, '/reaction_time');
-              },
+                //Navigator.pushNamed(context, '/reaction_time');
+                final user = <String, dynamic>{
+                // "uid" : FirebaseAuth.instance.currentUser?.uid ?? "",
+                "clicks" : 0
+              };
+              FirebaseFirestore db = FirebaseFirestore.instance;
+              db.collection('users').add(user).then((DocumentReference doc) => print("thx"));
+            },
               child: Text('Reaction Time'),
             ),
             SizedBox(height: 20),

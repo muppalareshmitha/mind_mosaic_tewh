@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterPage extends StatefulWidget {
   final VoidCallback showLoginPage;
@@ -16,6 +20,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  var user = '';
   bool passwordMatch = true;
   bool isPasswordShort = false;
 
@@ -28,15 +33,6 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  Future signUp() async {
-    if (passwordConfirmed()) {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim()
-      );
-    }
-  }
-
   bool passwordConfirmed() {
     bool matches = _passwordController.text.trim() == _confirmPasswordController.text.trim();
     bool isShort = _passwordController.text.trim().length < 6;
@@ -47,6 +43,39 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     return matches && !isShort;
+  }
+
+  Future signUp() async {
+    // if (passwordConfirmed()) {
+    //   await FirebaseAuth.instance.createUserWithEmailAndPassword(
+    //     email: _emailController.text.trim(),
+    //     password: _passwordController.text.trim()
+    //   );
+    //   CollectionReference users = FirebaseFirestore.instance.collection('users');
+    //   users.add({'email' : _emailController.text.trim(), 'clicks' : 0}).then((value) => print('User Added')).catchError((error) => print('Failed to add User'));
+    // }
+    if (passwordConfirmed()) {
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim()
+      );
+      
+      // Use Firebase Authentication UID as Firestore document ID
+      String userId = userCredential.user!.uid;
+
+      // Add user data to Firestore using the user ID as document ID
+      await FirebaseFirestore.instance.collection('users').doc(userId).set({
+        'email': _emailController.text.trim(),
+        'notematch_correct': 0,
+        'notematch_incorrect': 0
+      });
+
+      print('User Added');
+    } catch (error) {
+      print('Failed to add User: $error');
+    }
+  }
   }
 
   @override
@@ -85,6 +114,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 25.0),
                   child: TextField(
+                    onChanged: (value) {
+                      user = value;
+                    },
                     controller: _emailController,
                     decoration: InputDecoration(
                       enabledBorder: OutlineInputBorder(
