@@ -35,12 +35,13 @@ class ShapeRotationPageState extends State<ShapeRotationPage> {
             SizedBox(height: 20),
             Icon(Icons.shape_line, size: 100, color: Colors.deepPurple),
             SizedBox(height: 10),
-            Center(
-              child: Text(
-                'Welcome to the Shape Rotation Game!',
-                style: TextStyle(fontSize: 22),
-              ),
-            ),
+            Text('Welcome to Shape Rotation Game!', style: TextStyle(fontSize: 18)),
+            // Center(
+            //   child: Text(
+            //     'Welcome to the Shape Rotation Game!',
+            //     style: TextStyle(fontSize: 18),
+            //   ),
+            // ),
             SizedBox(height: 20),
             Container(
               padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
@@ -50,7 +51,7 @@ class ShapeRotationPageState extends State<ShapeRotationPage> {
               ),
               child: Text(
                 'Exercise 2: Rotate the Pentagon twice.',
-                style: TextStyle(fontSize: 20, color: Colors.white), // Text style
+                style: TextStyle(fontSize: 15, color: Colors.white), // Text style
               ),
             ),
             SizedBox(height: 20),
@@ -58,7 +59,7 @@ class ShapeRotationPageState extends State<ShapeRotationPage> {
               Text(
                 'Great job! 👍',
                 style: TextStyle(
-                  fontSize: 35.0, // adjust the size as needed
+                  fontSize: 20.0, // adjust the size as needed
                 ),
               ),
           ],
