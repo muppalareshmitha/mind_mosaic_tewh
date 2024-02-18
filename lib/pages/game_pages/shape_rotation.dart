@@ -70,7 +70,7 @@ class ShapeRotationPageState extends State<ShapeRotationPage> {
   // Method to show the emoji after a delay
   void _showEmojiAfterDelay() {
     // Set a delay of 5 seconds before showing the emoji
-    Future.delayed(Duration(seconds: 15), () {
+    Future.delayed(Duration(seconds: 20), () {
       setState(() {
         _showEmoji = true;
       });
