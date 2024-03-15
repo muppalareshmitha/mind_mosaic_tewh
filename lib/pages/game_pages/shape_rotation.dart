@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors, prefer_final_fields, use_key_in_widget_constructors, library_private_types_in_public_api, unrelated_type_equality_checks
+// ignore_for_file: prefer_const_constructors, prefer_final_fields, use_key_in_widget_constructors, library_private_types_in_public_api, unrelated_type_equality_checks, deprecated_member_use
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -112,7 +112,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     late StreamSubscription<String> subscription;
     Timer? timer;
     subscription = (_port!.inputStream! as Stream<String>).listen((event) {
-      if (event.trim() == "confirm") {
+      if (event.trim() == "confirm\n") {
         completer.complete("confirm");
       }
     });
@@ -131,6 +131,10 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     late StreamSubscription<String> subscription;
     Timer? timer;
     subscription = (_port!.inputStream! as Stream<String>).listen((event) {
+      String trimmedEvent = event.trim();
+      if (trimmedEvent.endsWith("\n")) {
+        trimmedEvent = trimmedEvent.substring(0, trimmedEvent.length - 1);
+      }
       int? time = int.tryParse(event.trim());
       if (time != null) {
         completer.complete(time);
