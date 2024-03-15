@@ -238,7 +238,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
                   : "No serial devices available",
               style: Theme.of(context).textTheme.headline5,
             ),
-            ..._serialData,
+            ..._serialData, // Display the list of available serial ports here
             SizedBox(height: 20),
             Text('Status: $_status'),
             SizedBox(height: 20),
