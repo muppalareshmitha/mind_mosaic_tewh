@@ -102,7 +102,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
 
   Future<void> _sendCommand(String command) async {
     if (_port != null) {
-      String data = command + "\r\n";
+      String data = command + "\n";
       await _port!.write(Uint8List.fromList(data.codeUnits));
     }
   }
