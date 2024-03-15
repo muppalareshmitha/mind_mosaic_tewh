@@ -112,17 +112,20 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     late StreamSubscription<String> subscription;
     Timer? timer;
     subscription = (_port!.inputStream! as Stream<String>).listen((event) {
-      if (event.trim() == "confirm\n") {
+      if (event == "confirm\n") {
         completer.complete("confirm");
+      } else {
+        timer = Timer(Duration(seconds: 5), () {
+          completer.complete("timeout");
+        });
       }
     });
-    timer = Timer(Duration(seconds: 5), () {
-      completer.complete("timeout");
-    });
+    
     await completer.future.whenComplete(() {
       timer!.cancel();
       subscription.cancel();
     });
+    
     return completer.future;
   }
 
