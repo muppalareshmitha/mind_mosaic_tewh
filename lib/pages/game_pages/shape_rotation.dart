@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:usb_serial/usb_serial.dart';
+import 'package:usb_serial/transaction.dart';
 
 class ShapeRotationPage extends StatefulWidget {
   @override
@@ -18,6 +19,8 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   List<int> _gameResults = [];
 
   late StreamSubscription<UsbEvent> _usbEventSubscription;
+  late StreamSubscription<String>? subscription;
+  Transaction<String>? _transaction;
 
   int _currentShapeIndex = 0;
   List<Widget> _shapeWidgets = [
@@ -52,6 +55,15 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     if (_port != null) {
       _port!.close();
       _port = null;
+    }
+    if (subscription != null) {
+      subscription!.cancel();
+      subscription = null;
+    }
+
+    if (_transaction != null) {
+      _transaction!.dispose();
+      _transaction = null;
     }
     if (device == null) {
       setState(() {
@@ -109,6 +121,21 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
 
   Future<String> _waitForConfirmation() async {
     Completer<String> completer = Completer<String>();
+    _transaction = Transaction.stringTerminated(
+        _port!.inputStream! as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+
+    subscription = _transaction!.stream.listen((String event) {
+      if(event == "confirm\n") {
+        completer.complete("confirm");
+      } else  {
+        completer.complete("timeout");
+      }
+    });
+    return completer.future;
+  }
+
+  /*Future<String> _waitForConfirmation() async {
+    Completer<String> completer = Completer<String>();
     late StreamSubscription<String> subscription;
     Timer? timer;
     subscription = (_port!.inputStream! as Stream<String>).listen((event) {
@@ -125,9 +152,9 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       timer!.cancel();
       subscription.cancel();
     });
-    
+
     return completer.future;
-  }
+  }*/
 
   Future<int> _receiveResult() async {
     Completer<int> completer = Completer<int>();
