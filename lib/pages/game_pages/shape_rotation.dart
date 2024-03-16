@@ -102,7 +102,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
 
   Future<void> _sendCommand(String command) async {
     if (_port != null) {
-      String data = command + "\r\n";
+      String data = command + "\n";
       await _port!.write(Uint8List.fromList(data.codeUnits));
     }
   }
@@ -112,7 +112,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     late StreamSubscription<String> subscription;
     Timer? timer;
     subscription = (_port!.inputStream! as Stream<String>).listen((event) {
-      if (event.trim() == "confirm") {
+      if (event == "confirm\n") {
         completer.complete("confirm");
       }
     });
