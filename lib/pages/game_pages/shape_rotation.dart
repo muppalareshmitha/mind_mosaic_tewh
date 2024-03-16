@@ -61,6 +61,10 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       });
       return true;
     }
+    if (_transaction != null) {
+      _transaction!.dispose();
+      _transaction = null;
+    }
     _port = await device.create();
     if (await (_port!.open()) != true) {
       setState(() {
@@ -115,19 +119,26 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     Timer? timer;
     _transaction = Transaction.stringTerminated(
         _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
-    subscription = _transaction!.stream.listen((String event) {
-      if (event == "confirm\n") {
-        completer.complete("confirm");
-      } else {
-        timer = Timer(Duration(seconds: 5), () {
-          completer.complete("timeout");
-        });
-      }
+    // subscription = _transaction!.stream.listen((String event) {
+    _transaction!.stream.listen((String event) {
+      print(event);
+      print(event);
+      print(event);
+      print("HEllo");
+      print("HEllo");
+      print("HEllo");
+      // if (event == "confirm") {
+      //   completer.complete("confirm");
+      // } else {
+      //   timer = Timer(Duration(seconds: 5), () {
+      //     completer.complete("timeout");
+      //   });
+      // }
     });
     
     await completer.future.whenComplete(() {
       timer!.cancel();
-      subscription.cancel();
+      // subscription.cancel();
     });
     return completer.future;
   }
@@ -170,7 +181,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       _currentShapeIndex = 0; // Reset the shape index to 0
       await _displayNextShape(); // Start displaying shapes
     } else {
-      _showErrorDialog('Failed to confirm start. Please try again.');
+      _showErrorDialog(confirmation);
     }
   }
 
