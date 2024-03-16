@@ -17,6 +17,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   String _status = "Idle";
   List<Widget> _serialData = [];
   List<int> _gameResults = [];
+  UsbDevice? _device;
 
   late StreamSubscription<UsbEvent> _usbEventSubscription;
   late StreamSubscription<String>? subscription;
@@ -50,7 +51,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     super.dispose();
   }
 
-  Future<bool> _connectTo(UsbDevice? device) async {
+  Future<bool> _connectTo(device) async {
     _serialData.clear();
     if (_port != null) {
       _port!.close();
@@ -66,6 +67,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       _transaction = null;
     }
     if (device == null) {
+      _device = null;
       setState(() {
         _status = "Disconnected";
       });
@@ -95,20 +97,29 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   void _getPorts() async {
     List<Widget> ports = [];
     List<UsbDevice> devices = await UsbSerial.listDevices();
+    if (!devices.contains(_device)) {
+      _connectTo(null);
+    }
+    print(devices);
+
     devices.forEach((device) {
       ports.add(ListTile(
+        leading: Icon(Icons.usb),
         title: Text(device.productName!),
         subtitle: Text(device.manufacturerName!),
         trailing: ElevatedButton(
+          child: Text(_device == device ? "Disconnect" : "Connect"),
           onPressed: () {
-            _connectTo(_port == device ? null : device);
+            _connectTo(_device == device ? null : device).then((res) {
+              _getPorts();
+            });
           },
-          child: Text(_port == device ? "Disconnect" : "Connect"),
         ),
       ));
     });
     setState(() {
       _serialData = ports;
+      print(ports);
     });
   }
 
@@ -194,6 +205,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     await _sendCommand("rotate");
     String confirmation = await _waitForConfirmation();
     if (confirmation == "confirm") {
+      print("test");
       await _displayNextShape();
     } else {
       _showErrorDialog('Failed to confirm start. Please try again.');
