@@ -2,6 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:usb_serial/transaction.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:usb_serial/usb_serial.dart';
@@ -16,6 +17,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   String _status = "Idle";
   List<Widget> _serialData = [];
   List<int> _gameResults = [];
+  Transaction<String>? _transaction;
 
   late StreamSubscription<UsbEvent> _usbEventSubscription;
 
@@ -111,14 +113,18 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     Completer<String> completer = Completer<String>();
     late StreamSubscription<String> subscription;
     Timer? timer;
-    subscription = (_port!.inputStream! as Stream<String>).listen((event) {
+    _transaction = Transaction.stringTerminated(
+        _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+    subscription = _transaction!.stream.listen((String event) {
       if (event == "confirm\n") {
         completer.complete("confirm");
+      } else {
+        timer = Timer(Duration(seconds: 5), () {
+          completer.complete("timeout");
+        });
       }
     });
-    timer = Timer(Duration(seconds: 5), () {
-      completer.complete("timeout");
-    });
+    
     await completer.future.whenComplete(() {
       timer!.cancel();
       subscription.cancel();
