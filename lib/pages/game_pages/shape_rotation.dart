@@ -139,8 +139,10 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       // }
       _textData.add(event);
       String text = _textData[0];
-      if(text == "confirm\n") {
-        completer.complete("confirm");
+      if(text == "confirm") {
+        timer = Timer(Duration(seconds: 1), () {
+         completer.complete("confirm");
+        });
       } else {
         timer = Timer(Duration(seconds: 5), () {
           completer.complete("timeout");
@@ -148,11 +150,12 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       }
     }); 
     
+    
     await completer.future.whenComplete(() {
-      timer!.cancel();
+       timer!.cancel();
       _subscription!.cancel();
     });
-    
+
     return completer.future;
   } 
 
@@ -190,7 +193,6 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     await _sendCommand("rotate");
     String confirmation = await _waitForConfirmation();
     if (confirmation == "confirm") {
-      print("test");
       _currentShapeIndex = 0; // Reset the shape index to 0
       await _displayNextShape(); // Start displaying shapes
     } else {
@@ -201,9 +203,11 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   Future<void> _displayNextShape() async {
   if (_currentShapeIndex < _shapeWidgets.length) {
     setState(() {
-      _currentShapeIndex++; // Increment the index to move to the next shape
+       _serialData.add(Text("Inside"));
+      _shapeWidgets[_currentShapeIndex];
     });
     await _sendCommand(_currentShapeIndex.toString());
+    _currentShapeIndex++; // Increment the index to move to the next shape
     int time = await _receiveResult();
     _gameResults.add(time);
     if (_currentShapeIndex < _shapeWidgets.length) {
