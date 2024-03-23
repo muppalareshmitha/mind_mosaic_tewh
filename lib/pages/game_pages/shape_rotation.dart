@@ -114,19 +114,46 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   }
 
   Future<String> _waitForConfirmation() async {
+  Completer<String> completer = Completer<String>();
+  StreamSubscription<String>? subscription;
+  Timer? timer;
+
+  // Initialize the transaction with the Pico device
+  _transaction = Transaction.stringTerminated(
+    _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+
+  // Set a timeout duration
+  const timeout = Duration(seconds: 5);
+
+  // Listen for events from the Pico device
+  subscription = _transaction!.stream.listen((String event) {
+    completer.complete(event);
+    subscription?.cancel();
+  }, onDone: () {
+    completer.complete('timeout');
+  });
+
+  // Start the timeout timer
+  timer = Timer(timeout, () {
+    completer.complete('timeout');
+    subscription?.cancel();
+  });
+
+  // Wait for the Completer to complete
+  return completer.future;
+}
+
+  /*Future<String> _waitForConfirmation() async {
     Completer<String> completer = Completer<String>();
-    late StreamSubscription<String> subscription;
+    StreamSubscription<String>? _subscription;
     Timer? timer;
     _transaction = Transaction.stringTerminated(
         _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
     // subscription = _transaction!.stream.listen((String event) {
-    _transaction!.stream.listen((String event) {
-      print(event);
-      print(event);
-      print(event);
-      print("HEllo");
-      print("HEllo");
-      print("HEllo");
+    _subscription = _transaction!.stream.listen((String event) {
+      timer = Timer(Duration(seconds: 5), () {
+           completer.complete(event);
+      });
       // if (event == "confirm") {
       //   completer.complete("confirm");
       // } else {
@@ -134,14 +161,14 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       //     completer.complete("timeout");
       //   });
       // }
-    });
+    }); 
     
     await completer.future.whenComplete(() {
       timer!.cancel();
       // subscription.cancel();
     });
     return completer.future;
-  }
+  } */
 
   Future<int> _receiveResult() async {
     Completer<int> completer = Completer<int>();
