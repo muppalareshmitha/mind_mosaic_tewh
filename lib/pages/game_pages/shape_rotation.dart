@@ -204,7 +204,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   if (_currentShapeIndex < _shapeWidgets.length) {
     setState(() {
        _serialData.add(Text("Inside"));
-      _shapeWidgets[_currentShapeIndex];
+       _shapeWidgets[_currentShapeIndex];
     });
     await _sendCommand(_currentShapeIndex.toString());
     _currentShapeIndex++; // Increment the index to move to the next shape
