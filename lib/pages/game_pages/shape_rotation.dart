@@ -16,8 +16,10 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   UsbPort? _port;
   String _status = "Idle";
   List<Widget> _serialData = [];
+  List<String> _textData = [];
   List<int> _gameResults = [];
   Transaction<String>? _transaction;
+  StreamSubscription<String>? _subscription;
 
   late StreamSubscription<UsbEvent> _usbEventSubscription;
 
@@ -51,6 +53,11 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
 
   Future<bool> _connectTo(UsbDevice? device) async {
     _serialData.clear();
+    _textData.clear();
+    if (_subscription != null) {
+      _subscription!.cancel();
+      _subscription = null;
+    }
     if (_port != null) {
       _port!.close();
       _port = null;
@@ -114,46 +121,15 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   }
 
   Future<String> _waitForConfirmation() async {
-  Completer<String> completer = Completer<String>();
-  StreamSubscription<String>? subscription;
-  Timer? timer;
-
-  // Initialize the transaction with the Pico device
-  _transaction = Transaction.stringTerminated(
-    _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
-
-  // Set a timeout duration
-  const timeout = Duration(seconds: 5);
-
-  // Listen for events from the Pico device
-  subscription = _transaction!.stream.listen((String event) {
-    completer.complete(event);
-    subscription?.cancel();
-  }, onDone: () {
-    completer.complete('timeout');
-  });
-
-  // Start the timeout timer
-  timer = Timer(timeout, () {
-    completer.complete('timeout');
-    subscription?.cancel();
-  });
-
-  // Wait for the Completer to complete
-  return completer.future;
-}
-
-  /*Future<String> _waitForConfirmation() async {
     Completer<String> completer = Completer<String>();
-    StreamSubscription<String>? _subscription;
     Timer? timer;
     _transaction = Transaction.stringTerminated(
         _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
     // subscription = _transaction!.stream.listen((String event) {
     _subscription = _transaction!.stream.listen((String event) {
-      timer = Timer(Duration(seconds: 5), () {
+      /*timer = Timer(Duration(seconds: 5), () {
            completer.complete(event);
-      });
+      }); */
       // if (event == "confirm") {
       //   completer.complete("confirm");
       // } else {
@@ -161,14 +137,24 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       //     completer.complete("timeout");
       //   });
       // }
+      _textData.add(event);
+      String text = _textData[0];
+      if(text == "confirm\n") {
+        completer.complete("confirm");
+      } else {
+        timer = Timer(Duration(seconds: 5), () {
+          completer.complete("timeout");
+        });
+      }
     }); 
     
     await completer.future.whenComplete(() {
       timer!.cancel();
-      // subscription.cancel();
+      _subscription!.cancel();
     });
+    
     return completer.future;
-  } */
+  } 
 
   Future<int> _receiveResult() async {
     Completer<int> completer = Completer<int>();
