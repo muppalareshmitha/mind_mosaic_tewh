@@ -201,23 +201,26 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   }
 
   Future<void> _displayNextShape() async {
-  if (_currentShapeIndex < _shapeWidgets.length) {
-    setState(() {
-       _serialData.add(Text("Inside"));
-       _shapeWidgets[_currentShapeIndex];
-    });
-    await _sendCommand(_currentShapeIndex.toString());
-    _currentShapeIndex++; // Increment the index to move to the next shape
-    int time = await _receiveResult();
-    _gameResults.add(time);
     if (_currentShapeIndex < _shapeWidgets.length) {
-      await Future.delayed(Duration(seconds: 1));
-      await _displayNextShape(); // Recursively call _displayNextShape to show the next shape
-    } else {
-      _navigateToResultsPage();
+      await _sendCommand(_currentShapeIndex.toString());
+      setState(() {
+        _serialData.add(
+          ShapeContainer(
+            icon: _shapeWidgets[_currentShapeIndex],
+          ),
+        );
+      });
+      _currentShapeIndex++;
+      int time = await _receiveResult();
+      _gameResults.add(time);
+      if (_currentShapeIndex < _shapeWidgets.length) {
+        await Future.delayed(Duration(seconds: 1));
+        await _displayNextShape();
+      } else {
+        _navigateToResultsPage();
+      }
     }
   }
-}
 
   void _navigateToResultsPage() {
     Navigator.push(
@@ -315,6 +318,28 @@ class ResultsPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class ShapeContainer extends StatefulWidget {
+  final Widget icon;
+
+  ShapeContainer({required this.icon});
+
+  @override
+  _ShapeContainerState createState() => _ShapeContainerState();
+}
+
+class _ShapeContainerState extends State<ShapeContainer> {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        width: 200,
+        height: 200,
+        child: widget.icon,
       ),
     );
   }
