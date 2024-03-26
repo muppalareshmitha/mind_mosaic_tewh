@@ -17,7 +17,8 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   String _status = "Idle";
   List<Widget> _serialData = [];
   List<String> _textData = [];
-  List<int> _gameResults = [];
+  List<String> _resultData = [];
+  List<String> _gameResults = [];
   Transaction<String>? _transaction;
   StreamSubscription<String>? _subscription;
 
@@ -54,6 +55,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   Future<bool> _connectTo(UsbDevice? device) async {
     _serialData.clear();
     _textData.clear();
+    _resultData.clear();
     if (_subscription != null) {
       _subscription!.cancel();
       _subscription = null;
@@ -150,7 +152,6 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       }
     }); 
     
-    
     await completer.future.whenComplete(() {
        timer!.cancel();
       _subscription!.cancel();
@@ -159,23 +160,31 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     return completer.future;
   } 
 
-  Future<int> _receiveResult() async {
-    Completer<int> completer = Completer<int>();
-    late StreamSubscription<String> subscription;
+  Future<String> _receiveResult() async {
+    Completer<String> completer = Completer<String>();
     Timer? timer;
-    subscription = (_port!.inputStream! as Stream<String>).listen((event) {
-      int? time = int.tryParse(event.trim());
-      if (time != null) {
-        completer.complete(time);
+    String text1;
+    _transaction = Transaction.stringTerminated(
+        _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+    _subscription = _transaction!.stream.listen((String event) {
+      _resultData.add(event);
+      text1 = _resultData[_currentShapeIndex];
+      if(text1 != "-1") {
+        timer = Timer(Duration(seconds: 1), () {
+         completer.complete(text1);
+        });
+      } else {
+        timer = Timer(Duration(seconds: 5), () {
+          completer.complete("-1");
+        });
       }
     });
-    timer = Timer(Duration(seconds: 5), () {
-      completer.complete(-1);
-    });
+
     await completer.future.whenComplete(() {
-      timer!.cancel();
-      subscription.cancel();
+       timer!.cancel();
+      _subscription!.cancel();
     });
+
     return completer.future;
   }
 
@@ -211,7 +220,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
         );
       });
       _currentShapeIndex++;
-      int time = await _receiveResult();
+      String time = await _receiveResult();
       _gameResults.add(time);
       if (_currentShapeIndex < _shapeWidgets.length) {
         await Future.delayed(Duration(seconds: 1));
@@ -293,7 +302,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
 }
 
 class ResultsPage extends StatelessWidget {
-  final List<int> results;
+  final List<String> results;
   final VoidCallback onBackToGamePressed;
 
   ResultsPage({required this.results, required this.onBackToGamePressed});
