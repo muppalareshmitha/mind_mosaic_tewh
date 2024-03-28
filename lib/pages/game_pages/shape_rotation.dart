@@ -16,25 +16,10 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   UsbPort? _port;
   String _status = "Idle";
   List<Widget> _serialData = [];
-  List<String> _textData = [];
-  List<String> _resultData = [];
-  List<String> _gameResults = [];
   Transaction<String>? _transaction;
   StreamSubscription<String>? _subscription;
 
   late StreamSubscription<UsbEvent> _usbEventSubscription;
-
-  int _currentShapeIndex = 0;
-  List<Widget> _shapeWidgets = [
-    Icon(Icons.crop_square),
-    Icon(Icons.pentagon),
-    Icon(Icons.favorite),
-    Icon(CupertinoIcons.triangle),
-    Icon(Icons.rectangle),
-    Icon(Icons.star),
-    Icon(Icons.local_hospital_sharp),
-    Icon(Icons.circle),
-  ];
 
   @override
   void initState() {
@@ -54,8 +39,6 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
 
   Future<bool> _connectTo(UsbDevice? device) async {
     _serialData.clear();
-    _textData.clear();
-    _resultData.clear();
     if (_subscription != null) {
       _subscription!.cancel();
       _subscription = null;
@@ -115,10 +98,105 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     });
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Shape Rotation Game'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text(
+              _serialData.isNotEmpty
+                  ? "Available Serial Ports"
+                  : "No serial devices available",
+              style: Theme.of(context).textTheme.headline5,
+            ),
+            ..._serialData,
+            SizedBox(height: 20),
+            Text('Status: $_status'),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _port == null
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => GameScreen(_port!)),
+                      );
+                    },
+              child: Text('Start Game'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ShapeContainer extends StatefulWidget {
+  final Widget icon;
+
+  ShapeContainer({required this.icon});
+
+  @override
+  _ShapeContainerState createState() => _ShapeContainerState();
+}
+
+class _ShapeContainerState extends State<ShapeContainer> {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        width: 200,
+        height: 200,
+        child: widget.icon,
+      ),
+    );
+  }
+}
+
+class GameScreen extends StatefulWidget {
+  final UsbPort port;
+
+  GameScreen(this.port);
+
+  @override
+  _GameScreenState createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  List<Widget> _serialData = [];
+  int _currentShapeIndex = 0;
+  List<Widget> _shapeWidgets = [
+    Icon(Icons.crop_square),
+    Icon(Icons.pentagon),
+    Icon(Icons.favorite),
+    Icon(CupertinoIcons.triangle),
+    Icon(Icons.rectangle),
+    Icon(Icons.star),
+    Icon(Icons.local_hospital_sharp),
+    Icon(Icons.circle),
+  ];
+  UsbPort? _port;
+  List<String> _gameResults = [];
+  Transaction<String>? _transaction;
+  StreamSubscription<String>? _subscription;
+  List<String> _textData = [];
+  List<String> _resultData = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _startGame();
+  }
+
   Future<void> _sendCommand(String command) async {
-    if (_port != null) {
+    if (widget.port != null) {
       String data = command + "\n";
-      await _port!.write(Uint8List.fromList(data.codeUnits));
+      await widget.port.write(Uint8List.fromList(data.codeUnits));
     }
   }
 
@@ -126,39 +204,28 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     Completer<String> completer = Completer<String>();
     Timer? timer;
     _transaction = Transaction.stringTerminated(
-        _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
-    // subscription = _transaction!.stream.listen((String event) {
+        widget.port.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
     _subscription = _transaction!.stream.listen((String event) {
-      /*timer = Timer(Duration(seconds: 5), () {
-           completer.complete(event);
-      }); */
-      // if (event == "confirm") {
-      //   completer.complete("confirm");
-      // } else {
-      //   timer = Timer(Duration(seconds: 5), () {
-      //     completer.complete("timeout");
-      //   });
-      // }
       _textData.add(event);
       String text = _textData[0];
-      if(text == "confirm") {
+      if (text == "confirm") {
         timer = Timer(Duration(seconds: 1), () {
-         completer.complete("confirm");
+          completer.complete("confirm");
         });
       } else {
         timer = Timer(Duration(seconds: 5), () {
           completer.complete("timeout");
         });
       }
-    }); 
-    
+    });
+
     await completer.future.whenComplete(() {
-       timer!.cancel();
+      timer!.cancel();
       _subscription!.cancel();
     });
 
     return completer.future;
-  } 
+  }
 
   Future<String> _receiveResult() async {
     Completer<String> completer = Completer<String>();
@@ -179,31 +246,22 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
         });
       }
     });
-
+    
     await completer.future.whenComplete(() {
-       timer!.cancel();
+      timer!.cancel();
       _subscription!.cancel();
     });
 
     return completer.future;
-  }
-
-  /*
-  Future<void> _connectToDevice(UsbDevice? device) async {
-    bool isConnected = await _connectTo(device);
-    if (isConnected) {
-      await _startGame();
-    }
-  } 
-  */
+}
 
   Future<void> _startGame() async {
     _gameResults.clear();
     await _sendCommand("rotate");
     String confirmation = await _waitForConfirmation();
     if (confirmation == "confirm") {
-      _currentShapeIndex = 0; // Reset the shape index to 0
-      await _displayNextShape(); // Start displaying shapes
+      _currentShapeIndex = 0;
+      await _displayNextShape();
     } else {
       _showErrorDialog(confirmation);
     }
@@ -247,7 +305,9 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     setState(() {
       _currentShapeIndex = 0;
       _gameResults.clear();
+      _serialData.clear();
     });
+    _startGame();
   }
 
   void _showErrorDialog(String errorMessage) {
@@ -280,20 +340,12 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
-              _serialData.isNotEmpty
-                  ? "Available Serial Ports"
-                  : "No serial devices available",
-              style: Theme.of(context).textTheme.headline5,
-            ),
+            SizedBox(height: 20),
             ..._serialData,
-            SizedBox(height: 20),
-            Text('Status: $_status'),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _port == null ? null : _startGame,
-              child: Text('Start Game'),
-            ),
+            if (_currentShapeIndex < _shapeWidgets.length)
+              ShapeContainer(
+                icon: _shapeWidgets[_currentShapeIndex],
+              ),
           ],
         ),
       ),
@@ -327,28 +379,6 @@ class ResultsPage extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class ShapeContainer extends StatefulWidget {
-  final Widget icon;
-
-  ShapeContainer({required this.icon});
-
-  @override
-  _ShapeContainerState createState() => _ShapeContainerState();
-}
-
-class _ShapeContainerState extends State<ShapeContainer> {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: SizedBox(
-        width: 200,
-        height: 200,
-        child: widget.icon,
       ),
     );
   }
