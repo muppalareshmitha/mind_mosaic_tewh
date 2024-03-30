@@ -209,7 +209,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
          completer.complete(text1);
         });
       } else {
-        timer = Timer(Duration(seconds: 5), () {
+        timer = Timer(Duration(seconds: 1), () {
           completer.complete("-1");
         });
       }
@@ -238,7 +238,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     String confirmation = await _waitForConfirmation();
     if (confirmation == "confirm") {
       _currentShapeIndex = 0; // Reset the shape index to 0
-      await _showNextShape(); // Start displaying shapes
+      _showNextShape(); // Start displaying shapes
     } else {
       _showErrorDialog(confirmation);
     }
@@ -248,9 +248,6 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     if (_currentShapeIndex < _shapeWidgets.length) {
       await _sendCommand(_currentShapeIndex.toString());
       _currentShapeIndex++; // Increment the index to move to the next shape
-
-      String time = await _receiveResult();
-      _gameResults.add(time);
 
       // Navigate to the ShapeDisplayScreen
       Navigator.push(
@@ -262,6 +259,11 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
           ),
         ),
       );
+
+      String time = await _receiveResult();
+      _gameResults.add(time);
+
+      
     }
   }
 
