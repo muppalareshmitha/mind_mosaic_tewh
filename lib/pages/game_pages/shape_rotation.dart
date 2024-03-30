@@ -9,8 +9,9 @@ import 'package:usb_serial/usb_serial.dart';
 
 class ShapeDisplayScreen extends StatefulWidget {
   final Widget shape;
+  final VoidCallback onNextPressed;
 
-  ShapeDisplayScreen({required this.shape});
+  ShapeDisplayScreen({required this.shape, required this.onNextPressed});
 
   @override
   _ShapeDisplayScreenState createState() => _ShapeDisplayScreenState();
@@ -25,7 +26,17 @@ class _ShapeDisplayScreenState extends State<ShapeDisplayScreen> {
         title: Text('Shape Display'),
       ),
       body: Center(
-        child: widget.shape,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            widget.shape,
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: widget.onNextPressed,
+              child: Text('Next'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -227,13 +238,34 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     String confirmation = await _waitForConfirmation();
     if (confirmation == "confirm") {
       _currentShapeIndex = 0; // Reset the shape index to 0
-      await _displayNextShape(); // Start displaying shapes
+      await _showNextShape(); // Start displaying shapes
     } else {
       _showErrorDialog(confirmation);
     }
   }
 
-  Future<void> _displayNextShape() async {
+  Future<void> _showNextShape() async {
+    if (_currentShapeIndex < _shapeWidgets.length) {
+      await _sendCommand(_currentShapeIndex.toString());
+      _currentShapeIndex++; // Increment the index to move to the next shape
+
+      String time = await _receiveResult();
+      _gameResults.add(time);
+
+      // Navigate to the ShapeDisplayScreen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ShapeDisplayScreen(
+            shape: _shapeWidgets[_currentShapeIndex - 1],
+            onNextPressed: _currentShapeIndex < _shapeWidgets.length ? _showNextShape : _navigateToResultsPage,
+          ),
+        ),
+      );
+    }
+  }
+
+  /*Future<void> _displayNextShape() async {
     if (_currentShapeIndex < _shapeWidgets.length) {
       await _sendCommand(_currentShapeIndex.toString());
       _currentShapeIndex++; // Increment the index to move to the next shape
@@ -253,12 +285,12 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
 
       if (_currentShapeIndex < _shapeWidgets.length) {
         await Future.delayed(Duration(seconds: 1));
-        await _displayNextShape(); // Recursively call _displayNextShape to show the next shape
+
       } else {
         _navigateToResultsPage();
       }
     }
-  }
+  } */
 
   void _navigateToResultsPage() {
     Navigator.push(
