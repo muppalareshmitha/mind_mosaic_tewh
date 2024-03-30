@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors, prefer_final_fields, use_key_in_widget_constructors, library_private_types_in_public_api
+// ignore_for_file: prefer_const_constructors, prefer_final_fields, use_key_in_widget_constructors, library_private_types_in_public_api, use_build_context_synchronously
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +6,30 @@ import 'package:usb_serial/transaction.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:usb_serial/usb_serial.dart';
+
+class ShapeDisplayScreen extends StatefulWidget {
+  final Widget shape;
+
+  ShapeDisplayScreen({required this.shape});
+
+  @override
+  _ShapeDisplayScreenState createState() => _ShapeDisplayScreenState();
+}
+
+class _ShapeDisplayScreenState extends State<ShapeDisplayScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: BackButton(),
+        title: Text('Shape Display'),
+      ),
+      body: Center(
+        child: widget.shape,
+      ),
+    );
+  }
+}
 
 class ShapeRotationPage extends StatefulWidget {
   @override
@@ -16,10 +40,25 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
   UsbPort? _port;
   String _status = "Idle";
   List<Widget> _serialData = [];
+  List<String> _resultData = [];
+  List<String> _textData = [];
+  List<String> _gameResults = [];
   Transaction<String>? _transaction;
   StreamSubscription<String>? _subscription;
 
   late StreamSubscription<UsbEvent> _usbEventSubscription;
+
+  int _currentShapeIndex = 0;
+  List<Widget> _shapeWidgets = [
+    Icon(Icons.crop_square),
+    Icon(Icons.pentagon),
+    Icon(Icons.favorite),
+    Icon(CupertinoIcons.triangle),
+    Icon(Icons.rectangle),
+    Icon(Icons.star),
+    Icon(Icons.local_hospital_sharp),
+    Icon(Icons.circle),
+  ];
 
   @override
   void initState() {
@@ -39,6 +78,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
 
   Future<bool> _connectTo(UsbDevice? device) async {
     _serialData.clear();
+    _textData.clear();
     if (_subscription != null) {
       _subscription!.cancel();
       _subscription = null;
@@ -98,105 +138,10 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Shape Rotation Game'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              _serialData.isNotEmpty
-                  ? "Available Serial Ports"
-                  : "No serial devices available",
-              style: Theme.of(context).textTheme.headline5,
-            ),
-            ..._serialData,
-            SizedBox(height: 20),
-            Text('Status: $_status'),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _port == null
-                  ? null
-                  : () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => GameScreen(_port!)),
-                      );
-                    },
-              child: Text('Start Game'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class ShapeContainer extends StatefulWidget {
-  final Widget icon;
-
-  ShapeContainer({required this.icon});
-
-  @override
-  _ShapeContainerState createState() => _ShapeContainerState();
-}
-
-class _ShapeContainerState extends State<ShapeContainer> {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: SizedBox(
-        width: 200,
-        height: 200,
-        child: widget.icon,
-      ),
-    );
-  }
-}
-
-class GameScreen extends StatefulWidget {
-  final UsbPort port;
-
-  GameScreen(this.port);
-
-  @override
-  _GameScreenState createState() => _GameScreenState();
-}
-
-class _GameScreenState extends State<GameScreen> {
-  List<Widget> _serialData = [];
-  int _currentShapeIndex = 0;
-  List<Widget> _shapeWidgets = [
-    Icon(Icons.crop_square),
-    Icon(Icons.pentagon),
-    Icon(Icons.favorite),
-    Icon(CupertinoIcons.triangle),
-    Icon(Icons.rectangle),
-    Icon(Icons.star),
-    Icon(Icons.local_hospital_sharp),
-    Icon(Icons.circle),
-  ];
-  UsbPort? _port;
-  List<String> _gameResults = [];
-  Transaction<String>? _transaction;
-  StreamSubscription<String>? _subscription;
-  List<String> _textData = [];
-  List<String> _resultData = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _startGame();
-  }
-
   Future<void> _sendCommand(String command) async {
-    if (widget.port != null) {
+    if (_port != null) {
       String data = command + "\n";
-      await widget.port.write(Uint8List.fromList(data.codeUnits));
+      await _port!.write(Uint8List.fromList(data.codeUnits));
     }
   }
 
@@ -204,28 +149,40 @@ class _GameScreenState extends State<GameScreen> {
     Completer<String> completer = Completer<String>();
     Timer? timer;
     _transaction = Transaction.stringTerminated(
-        widget.port.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+        _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+    // subscription = _transaction!.stream.listen((String event) {
     _subscription = _transaction!.stream.listen((String event) {
+      /*timer = Timer(Duration(seconds: 5), () {
+           completer.complete(event);
+      }); */
+      // if (event == "confirm") {
+      //   completer.complete("confirm");
+      // } else {
+      //   timer = Timer(Duration(seconds: 5), () {
+      //     completer.complete("timeout");
+      //   });
+      // }
       _textData.add(event);
       String text = _textData[0];
-      if (text == "confirm") {
+      if(text == "confirm") {
         timer = Timer(Duration(seconds: 1), () {
-          completer.complete("confirm");
+         completer.complete("confirm");
         });
       } else {
         timer = Timer(Duration(seconds: 5), () {
           completer.complete("timeout");
         });
       }
-    });
-
+    }); 
+    
+    
     await completer.future.whenComplete(() {
-      timer!.cancel();
+       timer!.cancel();
       _subscription!.cancel();
     });
 
     return completer.future;
-  }
+  } 
 
   Future<String> _receiveResult() async {
     Completer<String> completer = Completer<String>();
@@ -253,15 +210,24 @@ class _GameScreenState extends State<GameScreen> {
     });
 
     return completer.future;
-}
+  }
+
+  /*
+  Future<void> _connectToDevice(UsbDevice? device) async {
+    bool isConnected = await _connectTo(device);
+    if (isConnected) {
+      await _startGame();
+    }
+  } 
+  */
 
   Future<void> _startGame() async {
     _gameResults.clear();
     await _sendCommand("rotate");
     String confirmation = await _waitForConfirmation();
     if (confirmation == "confirm") {
-      _currentShapeIndex = 0;
-      await _displayNextShape();
+      _currentShapeIndex = 0; // Reset the shape index to 0
+      await _displayNextShape(); // Start displaying shapes
     } else {
       _showErrorDialog(confirmation);
     }
@@ -270,19 +236,24 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _displayNextShape() async {
     if (_currentShapeIndex < _shapeWidgets.length) {
       await _sendCommand(_currentShapeIndex.toString());
-      setState(() {
-        _serialData.add(
-          ShapeContainer(
-            icon: _shapeWidgets[_currentShapeIndex],
-          ),
-        );
-      });
-      _currentShapeIndex++;
+      _currentShapeIndex++; // Increment the index to move to the next shape
+
       String time = await _receiveResult();
       _gameResults.add(time);
+
+    // Navigate to the ShapeDisplayScreen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ShapeDisplayScreen(
+            shape: _shapeWidgets[_currentShapeIndex - 1],
+          ),
+        ),
+      );
+
       if (_currentShapeIndex < _shapeWidgets.length) {
         await Future.delayed(Duration(seconds: 1));
-        await _displayNextShape();
+        await _displayNextShape(); // Recursively call _displayNextShape to show the next shape
       } else {
         _navigateToResultsPage();
       }
@@ -305,9 +276,7 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       _currentShapeIndex = 0;
       _gameResults.clear();
-      _serialData.clear();
     });
-    _startGame();
   }
 
   void _showErrorDialog(String errorMessage) {
@@ -340,12 +309,20 @@ class _GameScreenState extends State<GameScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            SizedBox(height: 20),
+            Text(
+              _serialData.isNotEmpty
+                  ? "Available Serial Ports"
+                  : "No serial devices available",
+              style: Theme.of(context).textTheme.headline5,
+            ),
             ..._serialData,
-            if (_currentShapeIndex < _shapeWidgets.length)
-              ShapeContainer(
-                icon: _shapeWidgets[_currentShapeIndex],
-              ),
+            SizedBox(height: 20),
+            Text('Status: $_status'),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _port == null ? null : _startGame,
+              child: Text('Start Game'),
+            ),
           ],
         ),
       ),
@@ -383,3 +360,4 @@ class ResultsPage extends StatelessWidget {
     );
   }
 }
+
