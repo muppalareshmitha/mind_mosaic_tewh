@@ -311,6 +311,7 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       _currentShapeIndex = 0;
       _gameResults.clear();
     });
+    Navigator.of(context).pop();
   }
 
   void _showErrorDialog(String errorMessage) {
