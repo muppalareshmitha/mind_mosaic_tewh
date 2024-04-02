@@ -9,9 +9,9 @@ import 'package:usb_serial/usb_serial.dart';
 
 class ShapeDisplayScreen extends StatefulWidget {
   final Widget shape;
-  final VoidCallback? onNextPressed; // Make onNextPressed nullable
+  final VoidCallback onNextPressed;
 
-  ShapeDisplayScreen({required this.shape, this.onNextPressed});
+  ShapeDisplayScreen({required this.shape, required this.onNextPressed});
 
   @override
   _ShapeDisplayScreenState createState() => _ShapeDisplayScreenState();
@@ -31,11 +31,10 @@ class _ShapeDisplayScreenState extends State<ShapeDisplayScreen> {
           children: [
             widget.shape,
             SizedBox(height: 20),
-            if (widget.onNextPressed != null) // Check if onNextPressed is not null
-              ElevatedButton(
-                onPressed: widget.onNextPressed,
-                child: Text('Next'),
-              ),
+            ElevatedButton(
+              onPressed: widget.onNextPressed,
+              child: Text('Next'),
+            ),
           ],
         ),
       ),
@@ -250,22 +249,8 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
       await _sendCommand(_currentShapeIndex.toString());
       _currentShapeIndex++; // Increment the index to move to the next shape
 
-      // Navigate to the ShapeDisplayScreen without the "Next" button
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ShapeDisplayScreen(
-            shape: _shapeWidgets[_currentShapeIndex - 1],
-            onNextPressed: null, // Set onNextPressed to null initially
-          ),
-        ),
-      );
-
-      String time = await _receiveResult();
-      _gameResults.add(time);
-
-      // Show the "Next" button after receiving the time result
-      await Navigator.push(
+      // Navigate to the ShapeDisplayScreen
+      Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ShapeDisplayScreen(
@@ -274,6 +259,9 @@ class _ShapeRotationPageState extends State<ShapeRotationPage> {
           ),
         ),
       );
+
+      String time = await _receiveResult();
+      _gameResults.add(time);
     }
   }
 
@@ -407,4 +395,3 @@ class ResultsPage extends StatelessWidget {
     );
   }
 }
-
