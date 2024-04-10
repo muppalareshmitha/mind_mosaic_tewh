@@ -25,11 +25,19 @@ class GameHistoryPageState extends State<GameHistoryPage> {
 
   Future<void> _fetchUserGameData() async {
     User? user = _auth.currentUser;
+    
     if (user != null) {
-      DocumentSnapshot userData =
-          await _firestore.collection('users').doc(user.uid).get();
-      correct = userData.get('notematch_correct') ?? 1;
-      incorrect = userData.get('notematch_incorrect') ?? 1;
+      DocumentReference userData =
+          await _firestore.collection('users').doc(user.uid);
+      
+      userData.get().then(
+        (DocumentSnapshot doc) {
+          final data = doc.data();
+          correct = doc.get('notematch_correct') ?? 1;
+          incorrect = doc.get('notematch_incorrect') ?? 1;
+        },
+        onError: (e) => print("error getting the document : $e"),
+      );
     }
   }
 
@@ -39,22 +47,22 @@ class GameHistoryPageState extends State<GameHistoryPage> {
       appBar: AppBar(
         title: Text('Game History'),
       ),
-      // body: Center(
-      //   child: Column(
-      //     mainAxisAlignment: MainAxisAlignment.center,
-      //     children: [
-      //       Text(
-      //         'Note Matching Game Correct: ${correct}',
-      //         style: TextStyle(fontSize: 18),
-      //       ),
-      //       SizedBox(),
-      //       Text(
-      //         'Note Matching Game Incorrect: ${incorrect}',
-      //         style: TextStyle(fontSize: 18),
-      //       ),
-      //     ],
-      //   ),
-      // ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Note Matching Game Correct: ${correct}',
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(),
+            Text(
+              'Note Matching Game Incorrect: ${incorrect}',
+              style: TextStyle(fontSize: 18),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -55,7 +55,7 @@ class _ReactionTimePageState extends State<ReactionTimePage> {
   UsbPort? _port;
   String _status = "Idle";
   List<Widget> _serialData = [];
-  List<String> _resultData = [];
+  // List<String> _resultData = [];
   List<String> _gameResults = [];
   Transaction<String>? _transaction;
   StreamSubscription<String>? _subscription;
