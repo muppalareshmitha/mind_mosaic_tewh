@@ -56,24 +56,39 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    customButton('Piano Keys', '/piano_keys'),
-                    SizedBox(width:20),
                     SizedBox(
                       width: 170, // Set a fixed width for all buttons
                       child: ElevatedButton(
                       onPressed: () {
-                        //Navigator.pushNamed(context, '/reaction_time');
-                        final user = <String, dynamic>{
-                          // "uid" : FirebaseAuth.instance.currentUser?.uid ?? "",
-                          "clicks": 0
-                        };
-                        FirebaseFirestore db = FirebaseFirestore.instance;
-                        db.collection('users').add(user).then((DocumentReference doc) => print("thx"));
+                        Navigator.pushNamed(context, '/piano_keys');
                       },
-                      child: Text('Reaction Time'),
+                      child: Text('Piano Keys'),
                     )),
+                    SizedBox(width: 20),
+                    customButton('Reaction Time', '/reaction_time')
                   ],
                 ),
+                // Row(
+                //   mainAxisAlignment: MainAxisAlignment.center,
+                //   children: [
+                //     customButton('Piano Keys', '/piano_keys'),
+                //     SizedBox(width:20),
+                //     SizedBox(
+                //       width: 170, // Set a fixed width for all buttons
+                //       child: ElevatedButton(
+                //       onPressed: () {
+                //         //Navigator.pushNamed(context, '/reaction_time');
+                //         final user = <String, dynamic>{
+                //           // "uid" : FirebaseAuth.instance.currentUser?.uid ?? "",
+                //           "clicks": 0
+                //         };
+                //         FirebaseFirestore db = FirebaseFirestore.instance;
+                //         db.collection('users').add(user).then((DocumentReference doc) => print("thx"));
+                //       },
+                //       child: Text('Reaction Time'),
+                //     )),
+                //   ],
+                // ),
                 SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

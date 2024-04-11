@@ -57,6 +57,7 @@ class _ReactionTimePageState extends State<ReactionTimePage> {
   List<Widget> _serialData = [];
   // List<String> _resultData = [];
   List<String> _gameResults = [];
+  List<String> text_data = [];
   Transaction<String>? _transaction;
   StreamSubscription<String>? _subscription;
 
@@ -79,6 +80,7 @@ class _ReactionTimePageState extends State<ReactionTimePage> {
   }
 
   Future<bool> _connectTo(UsbDevice? device) async {
+    text_data.clear();
     _serialData.clear();
     if (_subscription != null) {
       _subscription!.cancel();
@@ -150,11 +152,18 @@ class _ReactionTimePageState extends State<ReactionTimePage> {
   Completer<String> completer = Completer<String>();
   Timer? timer;
   _transaction = Transaction.stringTerminated(
-      _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+  _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
   _subscription = _transaction!.stream.listen((String event) {
-    String receivedData = event; // Convert Uint8List to String
-    if (receivedData.isNotEmpty) {
-      completer.complete(receivedData);
+  text_data.add(event);
+  String received_text = text_data[0];
+  if(received_text == "confirm") {
+      timer = Timer(Duration(seconds: 1), () {
+        completer.complete("confirm");
+      });
+    } else {
+      timer = Timer(Duration(seconds: 5), () {
+        completer.complete("timeout");
+      });
     }
   });
 
@@ -169,8 +178,15 @@ class _ReactionTimePageState extends State<ReactionTimePage> {
 
   Future<void> _startGame() async {
     _gameResults.clear();
-    await _sendCommand("start");
+    await _sendCommand("reaction");
     String numberSequence = await _waitForConfirmation();
+    if(numberSequence == "confirm"){
+      setState(() {
+        _status = "NEXTTIME";
+      });
+    }
+    
+    
     _showNumberSequence(numberSequence);
   }
 
