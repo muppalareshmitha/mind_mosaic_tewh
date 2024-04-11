@@ -3,21 +3,23 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:usb_serial/transaction.dart';
 import 'package:usb_serial/usb_serial.dart';
 
 class FingerTappingPage extends StatefulWidget {
-  const FingerTappingPage({Key key}) : super(key: key);
+  const FingerTappingPage({Key? key}) : super(key: key);
 
   @override
   State<FingerTappingPage> createState() => FingerTappingPageState();
 }
 
 class FingerTappingPageState extends State<FingerTappingPage> {
-  UsbPort _port;
-  StreamSubscription<String> _subscription;
+  UsbPort? _port;
+  StreamSubscription<String>? _subscription;
   List<String> results = [];
   Random _random = Random();
-  int randomFinger;
+  int? randomFinger;
+  Transaction<String>? _transaction;
 
   @override
   void initState() {
@@ -31,8 +33,10 @@ class FingerTappingPageState extends State<FingerTappingPage> {
       UsbDevice device = devices[0];
       _port = await device.create();
       if (_port != null) {
-        await _port.open();
-        _subscription = _port.inputStream.listen((String data) {
+        await _port?.open();
+        _transaction = Transaction.stringTerminated(
+          _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+        _subscription = _transaction!.stream.listen((String data) {
           processResponse(data);
         });
       }
@@ -65,14 +69,14 @@ class FingerTappingPageState extends State<FingerTappingPage> {
 
   void sendCommand(String command) async {
     if (_port != null) {
-      _port.write(Uint8List.fromList(utf8.encode(command + "\n")));
+      _port?.write(Uint8List.fromList(utf8.encode(command + "\n")));
     }
   }
 
   @override
   void dispose() {
-    _subscription.cancel();
-    _port.close();
+    _subscription!.cancel();
+    _port!.close();
     super.dispose();
   }
 
