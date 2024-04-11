@@ -16,8 +16,13 @@ migration:
       create_revision: 300451adae589accbece3490f4396f10bdf15e6e
       base_revision: 300451adae589accbece3490f4396f10bdf15e6e
     - platform: android
+<<<<<<< HEAD
       create_revision: 300451adae589accbece3490f4396f10bdf15e6e
       base_revision: 300451adae589accbece3490f4396f10bdf15e6e
+=======
+      create_revision: 78666c8dc57e9f7548ca9f8dd0740fbf0c658dc9
+      base_revision: 78666c8dc57e9f7548ca9f8dd0740fbf0c658dc9
+>>>>>>> 5d7bd78 (ignore commit)
 
   # User provided section
 
