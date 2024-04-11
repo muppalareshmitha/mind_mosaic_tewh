@@ -1,42 +1,33 @@
+// ignore_for_file: prefer_const_constructors, prefer_final_fields, use_key_in_widget_constructors, library_private_types_in_public_api, use_build_context_synchronously
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:usb_serial/transaction.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:usb_serial/usb_serial.dart';
 
-class ReactionTimeScreen extends StatefulWidget {
-  final String numberSequence;
+class ButtonDisplayScreen extends StatelessWidget {
+  final Widget button;
   final VoidCallback onNextPressed;
 
-  ReactionTimeScreen({required this.numberSequence, required this.onNextPressed});
+  ButtonDisplayScreen({required this.button, required this.onNextPressed});
 
-  @override
-  _ReactionTimeScreenState createState() => _ReactionTimeScreenState();
-}
-
-class _ReactionTimeScreenState extends State<ReactionTimeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(),
-        title: Text('Reaction Time Game'),
+        title: Text('Button Display'),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Number Sequence:',
-              style: TextStyle(fontSize: 20),
-            ),
-            Text(
-              widget.numberSequence,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+            button,
             SizedBox(height: 20),
             ElevatedButton(
-              onPressed: widget.onNextPressed,
+              onPressed: onNextPressed,
               child: Text('Next'),
             ),
           ],
@@ -46,22 +37,31 @@ class _ReactionTimeScreenState extends State<ReactionTimeScreen> {
   }
 }
 
-class ReactionTimePage extends StatefulWidget {
+class ReactionTimeScreen extends StatefulWidget {
   @override
-  _ReactionTimePageState createState() => _ReactionTimePageState();
+  _ReactionTimeScreenState createState() => _ReactionTimeScreenState();
 }
 
-class _ReactionTimePageState extends State<ReactionTimePage> {
+class _ReactionTimeScreenState extends State<ReactionTimeScreen> {
   UsbPort? _port;
   String _status = "Idle";
   List<Widget> _serialData = [];
-  // List<String> _resultData = [];
+  List<String> _resultData = [];
+  List<String> _textData = [];
   List<String> _gameResults = [];
-  List<String> text_data = [];
   Transaction<String>? _transaction;
   StreamSubscription<String>? _subscription;
 
   late StreamSubscription<UsbEvent> _usbEventSubscription;
+
+  int _currentButtonIndex = 0;
+  List<Widget> _buttonWidgets = List.generate(
+    8,
+    (index) => ElevatedButton(
+      onPressed: null,
+      child: Text('Button $index'),
+    ),
+  );
 
   @override
   void initState() {
@@ -80,8 +80,8 @@ class _ReactionTimePageState extends State<ReactionTimePage> {
   }
 
   Future<bool> _connectTo(UsbDevice? device) async {
-    text_data.clear();
     _serialData.clear();
+    _textData.clear();
     if (_subscription != null) {
       _subscription!.cancel();
       _subscription = null;
@@ -149,141 +149,194 @@ class _ReactionTimePageState extends State<ReactionTimePage> {
   }
 
   Future<String> _waitForConfirmation() async {
-  Completer<String> completer = Completer<String>();
-  Timer? timer;
-  _transaction = Transaction.stringTerminated(
-  _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
-  _subscription = _transaction!.stream.listen((String event) {
-  text_data.add(event);
-  String received_text = text_data[0];
-  if(received_text == "confirm") {
-      timer = Timer(Duration(seconds: 1), () {
-        completer.complete("confirm");
-      });
-    } else {
-      timer = Timer(Duration(seconds: 5), () {
-        completer.complete("timeout");
-      });
-    }
-  });
+    Completer<String> completer = Completer<String>();
+    Timer? timer;
+    _transaction = Transaction.stringTerminated(
+        _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+    _subscription = _transaction!.stream.listen((String event) {
+      _textData.add(event);
+      String text = _textData[0];
+      if (text == "confirm") {
+        timer = Timer(Duration(seconds: 1), () {
+          completer.complete("confirm");
+        });
+      } else {
+        timer = Timer(Duration(seconds: 5), () {
+          completer.complete("timeout");
+        });
+      }
+    });
 
-  await completer.future.whenComplete(() {
-    timer!.cancel();
-    _subscription!.cancel();
-  });
+    await completer.future.whenComplete(() {
+      timer!.cancel();
+      _subscription!.cancel();
+    });
 
-  return completer.future;
-}
+    return completer.future;
+  }
 
+  Future<String> _receiveResult() async {
+    Completer<String> completer = Completer<String>();
+    Timer? timer;
+    String text1;
+    _transaction = Transaction.stringTerminated(
+        _port!.inputStream as Stream<Uint8List>, Uint8List.fromList([13, 10]));
+    _subscription = _transaction!.stream.listen((String event) {
+      _resultData.add(event);
+      text1 = _resultData[_currentButtonIndex];
+      if (text1 != "-1") {
+        timer = Timer(Duration(seconds: 1), () {
+          completer.complete(text1);
+        });
+      } else {
+        timer = Timer(Duration(seconds: 1), () {
+          completer.complete("-1");
+        });
+      }
+    });
+
+    await completer.future.whenComplete(() {
+      timer!.cancel();
+      _subscription!.cancel();
+    });
+
+    return completer.future;
+  }
 
   Future<void> _startGame() async {
     _gameResults.clear();
     await _sendCommand("reaction");
-    String numberSequence = await _waitForConfirmation();
-    if(numberSequence == "confirm"){
-      setState(() {
-        _status = "NEXTTIME";
-      });
+    String confirmation = await _waitForConfirmation();
+    if (confirmation == "confirm") {
+      _currentButtonIndex = 0; // Reset the button index to 0
+      _showNextButton(); // Start displaying buttons
+    } else {
+      _showErrorDialog(confirmation);
     }
-    
-    
-    _showNumberSequence(numberSequence);
   }
 
-  void _showNumberSequence(String numberSequence) {
+  Future<void> _showNextButton() async {
+    if (_currentButtonIndex < _buttonWidgets.length) {
+      await _sendCommand(_currentButtonIndex.toString());
+      _currentButtonIndex++; // Increment the index to move to the next button
+
+      // Navigate to the ButtonDisplayScreen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ButtonDisplayScreen(
+            button: _buttonWidgets[_currentButtonIndex - 1],
+            onNextPressed:
+                _currentButtonIndex < _buttonWidgets.length ? _showNextButton : _navigateToResultsPage,
+          ),
+        ),
+      );
+
+      String time = await _receiveResult();
+      _gameResults.add(time);
+    }
+  }
+
+  void _navigateToResultsPage() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ReactionTimeScreen(
-          numberSequence: numberSequence,
-          onNextPressed: () {
-            // Handle next button press
-            // Calculate reaction time and record it
-          },
+        builder: (context) => ResultsPage1(
+          results: _gameResults,
+          onBackToHomePressed: _resetGame,
         ),
       ),
     );
+  }
+
+  void _resetGame() {
+    setState(() {
+      _currentButtonIndex = 0;
+      _gameResults.clear();
+      _serialData.clear();
+      _status = "Idle";
+    });
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _showErrorDialog(String errorMessage) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Error'),
-          content: Text(errorMessage),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+   showDialog(
+     context: context,
+     builder: (BuildContext context) {
+       return AlertDialog(
+         title: Text('Error'),
+         content: Text(errorMessage),
+         actions: <Widget>[
+           TextButton(
+             onPressed: () {
+               Navigator.of(context).pop();
+             },
+             child: Text('OK'),
+           ),
+         ],
+       );
+     },
+   );
+ }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Reaction Time Game'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              _serialData.isNotEmpty
-                  ? "Available Serial Ports"
-                  : "No serial devices available",
-              style: Theme.of(context).textTheme.headline5,
-            ),
-            ..._serialData,
-            SizedBox(height: 20),
-            Text('Status: $_status'),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _port == null ? null : _startGame,
-              child: Text('Start Game'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+ @override
+ Widget build(BuildContext context) {
+   return Scaffold(
+     appBar: AppBar(
+       title: Text('Reaction Time Game'),
+     ),
+     body: Center(
+       child: Column(
+         mainAxisAlignment: MainAxisAlignment.center,
+         children: <Widget>[
+           Text(
+             _serialData.isNotEmpty
+                 ? "Available Serial Ports"
+                 : "No serial devices available",
+             style: Theme.of(context).textTheme.headline5,
+           ),
+           ..._serialData,
+           SizedBox(height: 20),
+           Text('Status: $_status'),
+           SizedBox(height: 20),
+           ElevatedButton(
+             onPressed: _port == null ? null : _startGame,
+             child: Text('Start Game'),
+           ),
+         ],
+       ),
+     ),
+   );
+ }
 }
 
 class ResultsPage1 extends StatelessWidget {
-  final List<String> results;
-  final VoidCallback onBackToGamePressed;
+ final List<String> results;
+ final VoidCallback onBackToHomePressed;
 
-  ResultsPage1({required this.results, required this.onBackToGamePressed});
+ ResultsPage1({required this.results, required this.onBackToHomePressed});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Game Results'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text('Game Results', style: Theme.of(context).textTheme.headlineSmall),
-            SizedBox(height: 20),
-            Text('Results: $results'),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: onBackToGamePressed,
-              child: Text('Back to Game'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+ @override
+ Widget build(BuildContext context) {
+   return Scaffold(
+     appBar: AppBar(
+       title: Text('Game Results'),
+     ),
+     body: Center(
+       child: Column(
+         mainAxisAlignment: MainAxisAlignment.center,
+         children: <Widget>[
+           Text('Game Results', style: Theme.of(context).textTheme.headlineSmall),
+           SizedBox(height: 20),
+           Text('Results: $results'),
+           SizedBox(height: 20),
+           ElevatedButton(
+             onPressed: onBackToHomePressed,
+             child: Text('Back to Home'),
+           ),
+         ],
+       ),
+     ),
+   );
+ }
 }
-

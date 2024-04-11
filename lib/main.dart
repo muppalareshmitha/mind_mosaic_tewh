@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
         '/note_matching': (context) => NoteMatchingPage(),
         '/finger_tapping': (context) => FingerTappingPage(),
         '/piano_keys': (context) => PianoKeysPage(),
-        '/reaction_time': (context) => ReactionTimePage(),
+        '/reaction_time': (context) => ReactionTimeScreen(),
         '/shape_placement': (context) => ShapePlacementPage(),
         '/shape_rotation': (context) => ShapeRotationPage(),
         '/simon_memory': (context) => SimonMemoryPage(),
